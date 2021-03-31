@@ -20,7 +20,7 @@ const char* gameMap3[] = {
 
 };
 
-const char* gameMap[] = {
+const char* gameMap4[] = {
  " #   # #                       ",
  "# # # ###                      ",
  "#  ## ##  ## #  ## #  ### # ## ",
@@ -31,7 +31,7 @@ const char* gameMap[] = {
  "         ##### #####           "
 };
 
-const char* gameMap4[] = {
+const char* gameMap[] = {
  "#     ##  ##    # ",
  " #    ##  ##     #",
  "#       ##      # ",
@@ -56,7 +56,7 @@ int gameMapHeight2 = 14;
 int gameMapHeight = 5;
 int gameMapWidth2 = 18;
 int gameMapWidth = 5;
-float ballSpeed = 1.0f;//0.375f;//0.75f;
+float ballSpeed = 0.25f;//0.375f;//0.75f;
 float movementMultiplier = 4.0f;
 float travelAngle = 0.0f;
 float circlePosX, circlePosY;
@@ -133,11 +133,13 @@ void displayBall() {
 }
 
 void display() {
+	//adv::fill(0,0,adv::width-1,adv::height-1,' ',BBLUE|FBLACK);
+	//adv::fill(brickOffset,brickOffset,adv::width-brickOffset-1,adv::height-brickOffset-1,' ',BBLACK|BBLACK);
 	displayGameMap();
 	displayPad();
 	displayBall();
-	if (brickOffset > 0)
-		adv::fancyBorder(0,0,adv::width-1,adv::height-1,BORDER_DOUBLE,FMAGENTA|BBLACK);	
+	//if (brickOffset > 0)
+		//adv::fancyBorder(0,0,adv::width-1,adv::height-1,BORDER_DOUBLE,FMAGENTA|BBLACK);	
 }
 
 int wmain() {
