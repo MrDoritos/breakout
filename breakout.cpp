@@ -1,6 +1,10 @@
 #include "advancedConsole.h"
 #include <math.h>
 
+#ifdef __WIN32
+#define curs_set(x) 
+#endif
+
 const char* gameMap3[] = {
  "#############           ",
  "#           #           ",
@@ -17,6 +21,17 @@ const char* gameMap3[] = {
 };
 
 const char* gameMap[] = {
+ " #   # #                       ",
+ "# # # ###                      ",
+ "#  ## ##  ## #  ## #  ### # ## ",
+ "# # # # ## ## ## ## ## # # ####",
+ "# ##  # # ### # ### #  ### #   ",
+ "### ######### ##### ########   ",
+ "          ### # ### #          ",
+ "         ##### #####           "
+};
+
+const char* gameMap4[] = {
  "#     ##  ##    # ",
  " #    ##  ##     #",
  "#       ##      # ",
@@ -41,7 +56,7 @@ int gameMapHeight2 = 14;
 int gameMapHeight = 5;
 int gameMapWidth2 = 18;
 int gameMapWidth = 5;
-float ballSpeed = 0.25f;//0.75f;
+float ballSpeed = 1.0f;//0.375f;//0.75f;
 float movementMultiplier = 4.0f;
 float travelAngle = 0.0f;
 float circlePosX, circlePosY;
@@ -128,9 +143,11 @@ void display() {
 int wmain() {
 	while (!adv::ready) console::sleep(10);
 	
+	#ifdef __linux__
 	curs_set(0);
 	adv::setDrawingMode(DRAWINGMODE_COMPARE);
 	adv::setDoubleWidth(true);
+	#endif
 	adv::setThreadState(false);
 	
 	init();
@@ -211,7 +228,10 @@ int wmain() {
 					} else {
 						//fprintf(stderr, "Vertical collision\r\n");
 						//travelAngle = PI * 0.5f;//PI * 0.25f - travelAngle; //was D_PI
-						travelAngle = D_PI - travelAngle;
+						if (travelAngle > PI)
+							travelAngle = D_PI - travelAngle + PI;
+						else
+							travelAngle = D_PI - travelAngle;
 						if (circlePosY - oldCirclePosY > 0.0f)
 							circlePosY = minY;
 						else
