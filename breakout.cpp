@@ -20,7 +20,16 @@ const char* gameMap3[] = {
 
 };
 
-const char* gameMap4[] = {
+const char* gameMap[] = {
+	"#######",
+	"       ",
+	"# # # #",
+	"#     #",
+	"#     #",
+	"##   ##"
+};
+
+const char* gameMap1[] = {
  " #   # #                       ",
  "# # # ###                      ",
  "#  ## ##  ## #  ## #  ### # ## ",
@@ -31,7 +40,7 @@ const char* gameMap4[] = {
  "         ##### #####           "
 };
 
-const char* gameMap[] = {
+const char* gameMap6[] = {
  "#     ##  ##    # ",
  " #    ##  ##     #",
  "#       ##      # ",
@@ -89,10 +98,10 @@ void init() {
 	        if (strlen(gameMap[i]) > gameMapWidth)
         		gameMapWidth = strlen(gameMap[i]);
 
-	padWidth = ceilf(float(adv::width) * 0.2f);
+	padWidth = ceilf(float(adv::width) * 0.2f);//0.2f);
 	padHeight = ceilf(float(adv::height) * 0.05f);
 	circlePosX = float(adv::width) * 0.5f;
-	circlePosY = adv::height - padHeight - 2.0f;
+	circlePosY = adv::height - padHeight - 10.0f;
 	padPosition = float(adv::width) * 0.5f - (padWidth * 0.5f);
 	travelAngle = D_PI * 0.75f;
 	brickOffset = 0;//1;
@@ -111,7 +120,7 @@ void init() {
 		}
 	}
 	
-	ballSpeed = adv::height / 55.0f;
+	ballSpeed = adv::height / 55.0f;// / 4.0f;
 }
 
 void displayGameMap0() {
@@ -142,6 +151,20 @@ void display() {
 	displayBall();
 	//if (brickOffset > 0)
 		//adv::fancyBorder(0,0,adv::width-1,adv::height-1,BORDER_DOUBLE,FMAGENTA|BBLACK);	
+}
+
+float wrap(float rotation) {
+	if (rotation < -D_PI) {
+		return wrap(rotation + D_PI);
+	} else
+		if (rotation > D_PI) {
+			return wrap(rotation - D_PI);
+		}
+	return rotation;
+}
+
+void nothing() {
+	
 }
 
 int wmain() {
@@ -177,6 +200,9 @@ int wmain() {
 					padPosition = 0.0f;
 				}
 				break;
+			case '0':
+				init();
+				break;
 		}
 
 
@@ -192,7 +218,7 @@ int wmain() {
 		circlePosY -= sin(travelAngle) * ballSpeed;
 		
 		//Collision against pad
-		if (circlePosY > adv::height - padHeight && circlePosX > padPosition && circlePosX < padPosition + padWidth) {
+		if (circlePosY > adv::height - padHeight && circlePosX > padPosition && circlePosX < padPosition + padWidth+1) {
 			float n = (circlePosX - padPosition) / padWidth;
 			//float n = 0.5f;
 			n -= 0.5f;
@@ -203,7 +229,85 @@ int wmain() {
 			init();
 		}
 		
+		
+		float minX, minY, maxX, maxY;
+		minX = brickOffset;
+		minY = brickOffset;
+		maxX = brickSizeW * gameMapWidth + brickOffset;
+		maxY = brickSizeH * gameMapHeight + brickOffset;
+		
+		char buf[50];
+		snprintf(&buf[0], 50, "travelAngle: %f", wrap(travelAngle));
+		travelAngle = wrap(travelAngle);
+		
+		float tolerance = 0.01f;
+		for (float step = 0.0f; step <= ballSpeed; step += 0.01f) {//0.01f) {
+			float inXfd = cos(travelAngle) * step * 5 + circlePosX;
+			float inYfd = -sin(travelAngle) * step * 5 + circlePosY;
+			float inXf = cos(travelAngle) * step + circlePosX;
+			float inYf = -sin(travelAngle) * step + circlePosY;
+			
+			//adv::write(inXfd, inYfd, '+', FBLUE | BBLACK);
+			//adv::write(inXf, inYf, '+', FYELLOW | BBLACK);
+			
+			//if (inXf < minX || inXf > maxX - 1 || inYf < minY || inYf > maxY - 1)
+			//	continue;
+						
+			int brickX = ((inXf) - (brickOffset)) / brickSizeW;
+			int brickY = ((inYf) - (brickOffset)) / brickSizeH;
+			
+			if (brickX < 0 || brickX > gameMapWidth - 1 || brickY < 0 || brickY > gameMapHeight - 1)
+				continue;
+			
+			//adv::write(inXfd, inYfd, '+', FBLUE | BRED);			
+			//adv::write(inXf, inYf, '+', FYELLOW | BRED);
+			
+			if (operatingGameMap[brickY * gameMapWidth + brickX] == ' ')
+				continue;
+			
+			
+			float minbX, minbY, maxbX, maxbY;			
+			minbX = brickSizeW * brickX + brickOffset;
+			minbY = brickSizeH * brickY + brickOffset;
+			maxbX = brickSizeW * brickX + brickOffset + brickSizeW;
+			maxbY = brickSizeH * brickY + brickOffset + brickSizeH;
+									
+			if (maxbY <= circlePosY - tolerance || circlePosY + tolerance < minbY || maxbX <= circlePosX - tolerance || circlePosX + tolerance < minbX)
+				continue;
+				
+			//float xdist = ((circlePosX - minbX) * (circlePosX - minbX)) + ((circlePosX - maxbX) * (circlePosX - maxbX));
+			//float ydist = ((circlePosY - minbY) * (circlePosY - minbY)) + ((circlePosY - maxbY) * (circlePosY - maxbY));
+				
+			auto square = [](float in) {
+				return in * in;
+			};
+				
+			float distl = square(circlePosX - minbX);//square(circlePosX - minbX) + square(circlePosY - minbY);
+			float distr = square(circlePosX - maxbX);//square(circlePosX - maxbX) + square(circlePosY - minbY);
+			float distt = square(circlePosY - minbY);//square(circlePosX - minbX) + square(circlePosY - maxbY);
+			float distb = square(circlePosY - maxbY);//square(circlePosX - maxbX) + square(circlePosY - maxbY);
+				
+			if ((distl < distb && distl < distt) || (distr < distb && distr < distt)) {
+				travelAngle = -PI - travelAngle;
+				circlePosY = oldCirclePosY;
+				circlePosX = oldCirclePosX;
+				
+				operatingGameMap[brickY * gameMapWidth + brickX] = ' ';
+				fprintf(stderr, "vertical wall\r\n");
+				break;
+			} else {
+				//travelAngle = D_PI - travelAngle;
+				travelAngle = (PI * 0.5f) - (travelAngle + PI - (PI * 0.5f));
+				circlePosY = oldCirclePosY;
+				circlePosX = oldCirclePosX;
+				fprintf(stderr, "horizontal wall\r\n");
+				operatingGameMap[brickY * gameMapWidth + brickX] = ' ';
+				break;
+			}
+		}
+		
 		//Collision against bricks
+		/*
 		for (int x = 0; x < gameMapWidth; x++) {
 			for (int y = 0; y < gameMapHeight; y++) {
 				if (operatingGameMap[y * gameMapWidth + x] == ' ')
@@ -245,18 +349,23 @@ int wmain() {
 				}
 			}
 		}
+		*/
 		
 		//Collision against walls
 		if (circlePosY < 0)
-			travelAngle = D_PI - travelAngle;
+			//travelAngle = D_PI - travelAngle;
+			travelAngle = PI * 0.5f - (travelAngle + PI - PI * 0.5f);
 		
+		//vertical walls
 		if (circlePosX > adv::width || circlePosX < 0)
-			travelAngle = PI - travelAngle;
+			//travelAngle = PI - travelAngle;
+			travelAngle = -PI - travelAngle;
 		
 		display();
+		//adv::write(0,0,&buf[0], FBLACK | BWHITE);
 		console::sleep(20);
 		adv::draw();
 	}
 	
-	return 0;
+	return 1;
 }
