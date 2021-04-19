@@ -110,8 +110,6 @@ void init() {
 			operatingGameMap[y * gameMapWidth + x] = gameMap[y][x];
 		}
 	}
-	
-	ballSpeed = adv::height / 55.0f;
 }
 
 void displayGameMap0() {
