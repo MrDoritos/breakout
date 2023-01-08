@@ -5,31 +5,7 @@
 #define curs_set(x) 
 #endif
 
-const char* gameMap3[] = {
- "#############           ",
- "#           #           ",
- "#           #           ",
- "#   #       #           ",
- "#   #       #           ",
- "#   #       #           ",
- "#   #########           ",
- "                        ",
- "                        ",
-
-
-
-};
-
-const char* gameMap6[] = {
-	"#######",
-	"       ",
-	"# # # #",
-	"#     #",
-	"#     #",
-	"##   ##"
-};
-
-const char* gameMap[] = {
+const char* gameMap0[] = {
  "#     ##  ##    # ",
  " #    ##  ##     #",
  "#       ##      # ",
@@ -37,6 +13,172 @@ const char* gameMap[] = {
  "#      #  #     # ",
  " #     #  #      #",
 };
+
+const char* gameMap1[] = {
+",'',,'', ,',  ,', ,'',,'', ,'',,'',  ",
+";  ;',,' ; ;  ; ; ;  ;',,' ;  ;',,'  ",
+";  ;',,' ; ;  ; ; ;  ;     ;  ;;  ;  ",
+";  ;     ; ',,' ; ;  ;,'', ;  ; ;  ; ",
+"',,'     ',,'',,' ',,'',,' ',,' ',,' ",
+                                     
+};
+
+const char* gameMap[] = {
+	"##11##1##11##",
+	"##11##1##11##",
+	"11##11111##11",
+	"1####111####1",
+	"1#11#111#11#1",
+	"1#11#111#11#1"
+};
+
+struct tilePartial {
+	int id;
+	bool hit;
+	unsigned char extraData;
+};
+
+struct tile {
+	int id;
+	tilePartial defaultState;
+	
+	tile() {
+		id = 0;
+	}
+	
+	virtual tilePartial getDefaultState() {
+		tilePartial partial;
+		partial.id = 0;
+		partial.hit = true;
+		return partial;
+	}
+	
+	virtual void getTexture(tilePartial *tp, float x, float y, wchar_t &ch, color_t &co) {
+		ch = L'/';
+		co = FWHITE | BBLACK;
+	}
+	virtual bool isSolid(tilePartial *tp) {
+		return false;
+	}
+	virtual void onHit(tilePartial *tp) {
+		tp->hit = true;
+	}
+};
+
+struct singleHit : public tile {
+	singleHit()	{
+		id = 1;
+	}
+	
+	void getTexture(tilePartial *tp, float x, float y, wchar_t &ch, color_t &co) override {
+		if (!tp->hit) {
+			ch = L' ';
+			co = FYELLOW | BYELLOW;
+		}
+	}
+	
+	bool isSolid(tilePartial *tp) override {
+		return !tp->hit;
+	}
+	
+	tilePartial getDefaultState() override {
+		tilePartial partial;
+		partial.id = 1;
+		partial.hit = false;
+		return partial;
+	}
+};
+
+struct coolTexture : public tile {
+	coolTexture() {
+		id = 2;
+	}
+	
+	bool isSolid(tilePartial *tp) override {
+		return !tp->hit;
+	}
+	
+	void getTexture(tilePartial *tp, float x, float y, wchar_t &ch, color_t &co) override {
+		if (!tp->hit) {
+			ch = L'#';
+			co = tp->extraData;
+		}
+	}
+	
+	tilePartial getDefaultState() override {
+		tilePartial partial;
+		partial.id = 2;
+		partial.hit = false;
+		partial.extraData = color_t((unsigned(rand()) % 7) + 1) | BBLACK;
+		return partial;
+	}	
+};
+
+struct multiHit : public tile {
+	multiHit() {
+		id = 3;
+	}
+	
+	void getTexture(tilePartial *tp, float x, float y, wchar_t &ch, color_t &co) override {
+		if (tp->extraData > 0) {
+			ch = L' ';
+			co = (tp->extraData + 1) << 4;
+		}
+	}
+
+	bool isSolid(tilePartial *tp) override {
+		return tp->extraData > 0;
+	}
+	
+	void onHit(tilePartial *tp) override {
+		if (tp->extraData > 1) {
+			tp->extraData--;
+			return;
+		} else
+			if (tp->extraData > 0) {
+				tp->extraData--;
+				tp->hit = true;
+				return;
+			}
+		return;
+	}
+	
+	tilePartial getDefaultState() override {
+		tilePartial partial;
+		partial.id = 3;
+		partial.hit = false;
+		partial.extraData = (rand() % 3) + 2;
+		return partial;
+	}
+};
+
+struct tiles {
+	static tile *DefaultTile;
+	static tile *SingleHit;
+	static tile *CoolTexture;
+	static tile *MultiHit;
+};
+
+tile *tiles::DefaultTile = new tile;
+tile *tiles::SingleHit = new singleHit;
+tile *tiles::CoolTexture = new coolTexture;
+tile *tiles::MultiHit = new multiHit;
+
+tile *getTile(tilePartial &partial) {
+	switch (partial.id) {
+		case 0:
+			return tiles::DefaultTile;
+		case 1:
+			return tiles::SingleHit;
+		case 2:
+			return tiles::CoolTexture;
+		case 3:
+			return tiles::MultiHit;
+	}
+	return tiles::DefaultTile;
+}
+
+tilePartial *operatingTileMap = nullptr;
 
 char* operatingGameMap = nullptr;
 
@@ -58,21 +200,29 @@ float padPosition;
 void displayGameMap() {
 	for (int x = 0; x < gameMapWidth; x++) {
 		for (int y = 0; y < gameMapHeight; y++) {
-			if (operatingGameMap[y * gameMapWidth + x] == ' ')
-				continue;
+			//if (!operatingTileMap[y * gameMapWidth + x].isSolid())
+			//	continue;
 				
 			//adv::write(x * sizeW + offset, y * sizeH + offset, ' ', FYELLOW | BYELLOW);
+			color_t color = FWHITE|BBLACK;// = FYELLOW | BYELLOW;
+			wchar_t character = L'/';// = L' ';
+			//tilePartial tp = tiles::CoolTexture->getDefaultState();
+			//tiles::CoolTexture->getTexture(&tp,0,0,character,color);
+			
+			getTile(operatingTileMap[y * gameMapWidth + x])->getTexture(&operatingTileMap[y * gameMapWidth + x],0,0,character,color);
+			
 			adv::fill(
 			x * brickSizeW + brickOffset,
 			y * brickSizeH + brickOffset,
 			x * brickSizeW + brickSizeW + brickOffset,
 			y * brickSizeH + brickSizeH + brickOffset,
-			' ', FYELLOW | BYELLOW);
+			character, color);
 		}
 	}
 }
 
 void init() {
+		srand(time(NULL));
         gameMapHeight = sizeof(gameMap)/sizeof(gameMap[0]);
         gameMapWidth = 0;
         for (int i = 0; i < gameMapHeight; i++)
@@ -90,18 +240,27 @@ void init() {
 	brickOffset = floorf((adv::width - float(brickSizeW * gameMapWidth)) * 0.5f);
 	brickSizeH = brickSizeW;
 	
+	if (operatingTileMap)
+		delete [] operatingTileMap;
 	if (operatingGameMap)
 		delete [] operatingGameMap;
 
 	operatingGameMap = new char[gameMapWidth * gameMapHeight];
+	operatingTileMap = new tilePartial[gameMapWidth * gameMapHeight];
 		
 	for (int y = 0; y < gameMapHeight; y++) {
 		for (int x = 0; x < gameMapWidth; x++) {
 			operatingGameMap[y * gameMapWidth + x] = gameMap[y][x];
+			char c;
+			if (((c = operatingGameMap[y * gameMapWidth + x]) == '#') && (c != ' '))
+				//if (rand() % 2 == 0)
+				//	operatingTileMap[y * gameMapWidth + x] = tiles::SingleHit->getDefaultState();
+				//else
+					operatingTileMap[y * gameMapWidth + x] = tiles::MultiHit->getDefaultState();
 		}
 	}
 	
-	ballSpeed = adv::height / 55.0f;// / 4.0f;
+	ballSpeed = 0.4f;//adv::height / 55.0f;// / 4.0f;
 }
 
 void displayGameMap0() {
@@ -167,6 +326,7 @@ int wmain() {
 		switch (key) {
 			case '>':
 			case VK_RIGHT:
+			case VK_UP:
 				if (padPosition + padWidth + movementMultiplier < adv::width) {
 					padPosition += movementMultiplier;
 				} else {
@@ -175,6 +335,7 @@ int wmain() {
 				break;
 			case '<':
 			case VK_LEFT:
+			case VK_DOWN:
 				if (padPosition - movementMultiplier > 0.0f) { 
 					padPosition -= movementMultiplier;
 				} else {
@@ -221,7 +382,7 @@ int wmain() {
 		snprintf(&buf[0], 50, "travelAngle: %f", wrap(travelAngle));
 		travelAngle = wrap(travelAngle);
 		
-		float tolerance = 0.01f;
+		float tolerance = 0.1f;
 		for (float step = 0.0f; step <= ballSpeed; step += 0.01f) {//0.01f) {
 			float inXfd = cos(travelAngle) * step * 5 + circlePosX;
 			float inYfd = -sin(travelAngle) * step * 5 + circlePosY;
@@ -243,7 +404,8 @@ int wmain() {
 			//adv::write(inXfd, inYfd, '+', FBLUE | BRED);			
 			//adv::write(inXf, inYf, '+', FYELLOW | BRED);
 			
-			if (operatingGameMap[brickY * gameMapWidth + brickX] == ' ')
+			//if (operatingGameMap[brickY * gameMapWidth + brickX] == ' ')
+			if (!getTile(operatingTileMap[brickY * gameMapWidth + brickX])->isSolid(&operatingTileMap[brickY * gameMapWidth + brickX]))
 				continue;
 			
 			
@@ -274,6 +436,7 @@ int wmain() {
 				circlePosX = oldCirclePosX;
 				
 				operatingGameMap[brickY * gameMapWidth + brickX] = ' ';
+				getTile(operatingTileMap[brickY * gameMapWidth + brickX])->onHit(&operatingTileMap[brickY * gameMapWidth + brickX]);
 				//fprintf(stderr, "vertical wall\r\n");
 				break;
 			} else {
@@ -283,54 +446,12 @@ int wmain() {
 				circlePosX = oldCirclePosX;
 				//fprintf(stderr, "horizontal wall\r\n");
 				operatingGameMap[brickY * gameMapWidth + brickX] = ' ';
+				getTile(operatingTileMap[brickY * gameMapWidth + brickX])->onHit(&operatingTileMap[brickY * gameMapWidth + brickX]);
 				break;
 			}
 		}
 		
 		//Collision against bricks
-		/*
-		for (int x = 0; x < gameMapWidth; x++) {
-			for (int y = 0; y < gameMapHeight; y++) {
-				if (operatingGameMap[y * gameMapWidth + x] == ' ')
-					continue;
-				
-				float minX, minY, maxX, maxY;
-				minX = brickSizeW * x + brickOffset;
-				minY = brickSizeH * y + brickOffset;
-				maxX = brickSizeW * x + brickOffset + brickSizeW;
-				maxY = brickSizeH * y + brickOffset + brickSizeH;
-				
-				if (circlePosX >= minX && circlePosX <= maxX && circlePosY >= minY && circlePosY <= maxY) {
-					
-					
-					
-					operatingGameMap[y * gameMapWidth + x] = ' ';
-					int xdist = maxX - circlePosX > circlePosX - minX ? maxX - circlePosX : circlePosX - minX;
-					int ydist = maxY - circlePosY > circlePosY - minY ? maxY - circlePosY : circlePosY - minY;
-					if (xdist < ydist) {
-						//fprintf(stderr, "Horizontal collision\r\n");
-						travelAngle = PI - travelAngle;
-						if (circlePosX - oldCirclePosX > 0.0f)
-							circlePosX = minX;
-						else
-							circlePosX = maxX;
-					} else {
-						//fprintf(stderr, "Vertical collision\r\n");
-						//travelAngle = PI * 0.5f;//PI * 0.25f - travelAngle; //was D_PI
-						if (travelAngle > PI)
-							travelAngle = D_PI - travelAngle + PI;
-						else
-							travelAngle = D_PI - travelAngle;
-						if (circlePosY - oldCirclePosY > 0.0f)
-							circlePosY = minY;
-						else
-							circlePosY = maxY;
-					}
-					//travelAngle += D_PI * 0.75f;
-				}
-			}
-		}
-		*/
 		
 		//Collision against walls
 		if (circlePosY < 0)
@@ -347,6 +468,8 @@ int wmain() {
 		console::sleep(20);
 		adv::draw();
 	}
+	
+	console::cons.~constructor();
 	
 	return 1;
 }
