@@ -5,7 +5,7 @@
 #define curs_set(x) 
 #endif
 
-const char* gameMap0[] = {
+const char* gameMap1[] = {
  "#     ##  ##    # ",
  " #    ##  ##     #",
  "#       ##      # ",
@@ -14,7 +14,7 @@ const char* gameMap0[] = {
  " #     #  #      #",
 };
 
-const char* gameMap1[] = {
+const char* gameMap0[] = {
 ",'',,'', ,',  ,', ,'',,'', ,'',,'',  ",
 ";  ;',,' ; ;  ; ; ;  ;',,' ;  ;',,'  ",
 ";  ;',,' ; ;  ; ; ;  ;     ;  ;;  ;  ",
@@ -307,21 +307,19 @@ void nothing() {
 	
 }
 
-int wmain() {
-	while (!adv::ready) console::sleep(10);
-	
+int wmain() {	
+	adv::setThreadState(false);
+
 	#ifdef __linux__
-	curs_set(0);
 	adv::setDrawingMode(DRAWINGMODE_COMPARE);
 	adv::setDoubleWidth(true);
 	#endif
-	adv::setThreadState(false);
 	
 	init();
 	
 	int key = 0;
 	
-	while (NOMOD(key = console::readKeyAsync()) != VK_ESCAPE) {
+	while (NOMOD(key = console::readKeyAsync()) != VK_ESCAPE && key != 'q') {
 		adv::clear();
 		switch (key) {
 			case '>':
@@ -465,11 +463,11 @@ int wmain() {
 		
 		display();
 		//adv::write(0,0,&buf[0], FBLACK | BWHITE);
-		console::sleep(20);
+		adv::waitForReadyFrame();
 		adv::draw();
 	}
+
+	adv::_advancedConsoleDestruct();
 	
-	console::cons.~constructor();
-	
-	return 1;
+	return 0;
 }
